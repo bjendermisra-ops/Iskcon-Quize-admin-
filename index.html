@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISKCON Master Admin</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary:#6200ea; --bg:#f3f4f6; --white:#fff; }
+        * { box-sizing: border-box; outline: none; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        
+        header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .brand { font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .quiz-select { padding: 8px; border-radius: 5px; border: none; font-weight: bold; }
+        
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 280px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; transition: 0.3s; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+        
+        .lvl-list { flex: 1; overflow-y: auto; }
+        .lvl-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; }
+        .lvl-item:hover { background: #f5f5f5; }
+        .lvl-item.active { background: #e8eaf6; color: var(--primary); border-left: 4px solid var(--primary); }
+        
+        .btn { padding: 12px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; color: white; }
+        .btn-add { background: #FFD700; color: black; }
+        .btn-save { background: #00C853; }
+        .btn-del { background: #ff5252; width: auto; font-size: 12px; padding: 5px 10px; }
+
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; }
+        
+        .tabs { display: flex; gap: 5px; margin-bottom: 10px; }
+        .tab { flex: 1; padding: 8px; background: #eee; text-align: center; cursor: pointer; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .tab.active { background: var(--primary); color: white; }
+        .sec { display: none; } .sec.active { display: block; }
+
+        @media(max-width:768px){ .sidebar { position: fixed; height: 100%; transform: translateX(-100%); z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.2); } .sidebar.open { transform: translateX(0); } .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:90; display:none; } .overlay.open { display:block; } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand"><span class="material-icons" onclick="toggleMenu()" style="cursor:pointer">menu</span> ISKCON Admin</div>
+        <select class="quiz-select" id="db-path" onchange="loadLevels()">
+            <option value="levels_multi">👳 Srila Prabhupada</option>
+            <option value="levels_krishna">🦚 Krishna Quiz</option>
+            <option value="levels_ramayan">🏹 Ramayan Quiz</option>
+            <option value="levels_gita">🕉️ Bhagavad Gita</option>
+        </select>
+    </header>
+
+    <div class="container">
+        <div class="overlay" onclick="toggleMenu()"></div>
+        <div class="sidebar" id="sidebar">
+            <button class="btn btn-add" onclick="addLevel()">+ ADD NEW LEVEL</button>
+            <div class="lvl-list" id="lvl-list">Loading...</div>
+        </div>
+
+        <div class="main">
+            <div id="welcome" style="text-align:center; color:#888; margin-top:50px;">
+                <h3>Select a Level from the Menu</h3>
+                <p>Or create a new one to start adding questions.</p>
+            </div>
+
+            <div id="content" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 id="lvl-name" style="margin:0; color:var(--primary);">Level Name</h2>
+                    <button class="btn-del" onclick="delLevel()">DELETE LEVEL</button>
+                </div>
+
+                <div class="card">
+                    <h4>Add Question</h4>
+                    <div class="tabs">
+                        <div class="tab active" onclick="tab('en')">English</div>
+                        <div class="tab" onclick="tab('hi')">Hindi</div>
+                        <div class="tab" onclick="tab('mr')">Marathi</div>
+                    </div>
+                    
+                    <div id="en" class="sec active">
+                        <input id="q-en" placeholder="Question (English)">
+                        <input id="o0-en" placeholder="Option A"><input id="o1-en" placeholder="Option B">
+                        <input id="o2-en" placeholder="Option C"><input id="o3-en" placeholder="Option D">
+                    </div>
+                    <div id="hi" class="sec">
+                        <input id="q-hi" placeholder="प्रश्न (हिंदी)">
+                        <input id="o0-hi" placeholder="विकल्प A"><input id="o1-hi" placeholder="विकल्प B">
+                        <input id="o2-hi" placeholder="विकल्प C"><input id="o3-hi" placeholder="विकल्प D">
+                    </div>
+                    <div id="mr" class="sec">
+                        <input id="q-mr" placeholder="प्रश्न (मराठी)">
+                        <input id="o0-mr" placeholder="पर्याय A"><input id="o1-mr" placeholder="पर्याय B">
+                        <input id="o2-mr" placeholder="पर्याय C"><input id="o3-mr" placeholder="पर्याय D">
+                    </div>
+
+                    <label style="font-size:12px; font-weight:bold">Correct Answer:</label>
+                    <select id="ans">
+                        <option value="0">Option A</option><option value="1">Option B</option>
+                        <option value="2">Option C</option><option value="3">Option D</option>
+                    </select>
+                    <button class="btn btn-save" onclick="saveQ()">SAVE QUESTION</button>
+                </div>
+
+                <div id="q-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDxuMG5tqPshrZBs4DSwQFAEnN4ufpAoEQ", authDomain: "iskcon-quize.firebaseapp.com", databaseURL: "https://iskcon-quize-default-rtdb.firebaseio.com", projectId: "iskcon-quize", storageBucket: "iskcon-quize.firebasestorage.app", messagingSenderId: "912283239180", appId: "1:912283239180:web:71d3500598a0aa8308ff29" };
+        firebase.initializeApp(firebaseConfig); const db = firebase.database();
+        
+        let CUR_LVL = null;
+
+        function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); document.querySelector('.overlay').classList.toggle('open'); }
+        function tab(t) { document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); event.target.classList.add('active'); document.querySelectorAll('.sec').forEach(x=>x.classList.remove('active')); document.getElementById(t).classList.add('active'); }
+
+        function loadLevels() {
+            const path = document.getElementById('db-path').value;
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('welcome').style.display = 'block';
+            db.ref(path).on('value', s => {
+                const d = document.getElementById('lvl-list'); d.innerHTML = "";
+                if(!s.val()) { d.innerHTML="<div style='padding:20px;text-align:center'>No Levels</div>"; return; }
+                Object.entries(s.val()).forEach(([k,v])=>{
+                    d.innerHTML += `<div class="lvl-item" onclick="selLvl('${k}','${v.name.en}')"><span>${v.name.en}</span><span>➔</span></div>`;
+                });
+            });
+        }
+
+        function addLevel() {
+            let en = prompt("Level Name (English):"); if(!en) return;
+            let hi = prompt("Name (Hindi):"); let mr = prompt("Name (Marathi):");
+            db.ref(document.getElementById('db-path').value).push({ name:{en, hi:hi||en, mr:mr||en}, created:Date.now() });
+        }
+
+        function selLvl(k,n) {
+            CUR_LVL = k;
+            document.getElementById('welcome').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('lvl-name').innerText = n;
+            toggleMenu(); // Close on mobile
+            
+            db.ref(`${document.getElementById('db-path').value}/${k}/questions`).on('value', s=>{
+                const d = document.getElementById('q-list'); d.innerHTML = "";
+                if(!s.val()) { d.innerHTML="<div style='text-align:center; color:#999'>No questions yet. Add one!</div>"; return; }
+                Object.entries(s.val()).forEach(([qid,v])=>{
+                    d.innerHTML += `<div class="card" style="border-left:4px solid gold">
+                    <button class="btn-del" style="float:right" onclick="delQ('${qid}')">DEL</button>
+                    <b>${v.q.en}</b><br><small>${v.q.hi} / ${v.q.mr}</small><br>
+                    <small style="color:green; font-weight:bold">Ans: Option ${['A','B','C','D'][v.a]}</small></div>`;
+                });
+            });
+        }
+
+        function saveQ() {
+            if(!CUR_LVL) return;
+            let en = document.getElementById('q-en').value; if(!en) return alert("English Question Required");
+            let data = {
+                q: { en, hi:document.getElementById('q-hi').value||en, mr:document.getElementById('q-mr').value||en },
+                o: [
+                    {en:document.getElementById('o0-en').value, hi:document.getElementById('o0-hi').value, mr:document.getElementById('o0-mr').value},
+                    {en:document.getElementById('o1-en').value, hi:document.getElementById('o1-hi').value, mr:document.getElementById('o1-mr').value},
+                    {en:document.getElementById('o2-en').value, hi:document.getElementById('o2-hi').value, mr:document.getElementById('o2-mr').value},
+                    {en:document.getElementById('o3-en').value, hi:document.getElementById('o3-hi').value, mr:document.getElementById('o3-mr').value}
+                ],
+                a: parseInt(document.getElementById('ans').value)
+            };
+            db.ref(`${document.getElementById('db-path').value}/${CUR_LVL}/questions`).push(data);
+            document.querySelectorAll('input').forEach(i=>i.value="");
+            alert("Saved!");
+        }
+
+        function delLevel() { if(confirm("Delete entire level?")) { db.ref(`${document.getElementById('db-path').value}/${CUR_LVL}`).remove(); location.reload(); } }
+        function delQ(qid) { if(confirm("Delete question?")) db.ref(`${document.getElementById('db-path').value}/${CUR_LVL}/questions/${qid}`).remove(); }
+
+        loadLevels();
+    </script>
+</body>
+</html>
